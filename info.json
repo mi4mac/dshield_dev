@@ -7,6 +7,8 @@
     "icon_small_name": "DShield_small.png",
     "icon_large_name": "DShield_large.png",
     "category": "Information",
+    "connector_version": "1.1.0",
+    "minimum_system_version": "7.0.0",
     "configuration": {
         "fields": [
             {
@@ -61,37 +63,42 @@
             ],
             "output_schema": {
                 "ip": {
-                    "mindate": "",
-                    "count": "",
-                    "network": "",
-                    "attacks": "",
-                    "asname": "",
-                    "asabusecontact": "",
-                    "comment": "",
-                    "as": "",
-                    "number": "",
-                    "maxrisk": "",
-                    "assize": "",
-                    "maxdate": "",
-                    "ascountry": "",
-                    "updated": "",
+                    "mindate": "First seen date",
+                    "count": "Number of attacks",
+                    "network": "Network CIDR",
+                    "attacks": "Attack information",
+                    "asname": "AS name",
+                    "asabusecontact": "AS abuse contact",
+                    "comment": "Additional comments",
+                    "as": "AS number",
+                    "number": "IP address",
+                    "maxrisk": "Maximum risk score",
+                    "assize": "AS size",
+                    "maxdate": "Last seen date",
+                    "ascountry": "AS country",
+                    "updated": "Last updated timestamp",
                     "alexa": {
-                        "lastrank": "",
-                        "firstseen": "",
-                        "lastseen": "",
-                        "hostname": "",
-                        "domains": ""
+                        "lastrank": "Last Alexa rank",
+                        "firstseen": "First seen in Alexa",
+                        "lastseen": "Last seen in Alexa",
+                        "hostname": "Hostname",
+                        "domains": "Associated domains"
                     },
                     "threatfeeds": {
                         "forumspam": {
-                            "firstseen": "",
-                            "lastseen": ""
+                            "firstseen": "First seen in forum spam",
+                            "lastseen": "Last seen in forum spam"
                         },
                         "qakbot": {
-                            "firstseen": "",
-                            "lastseen": ""
+                            "firstseen": "First seen in QakBot",
+                            "lastseen": "Last seen in QakBot"
                         }
                     }
+                },
+                "_metadata": {
+                    "query_ip": "Queried IP address",
+                    "source": "Data source",
+                    "connector_version": "Connector version"
                 }
             },
             "enabled": true
@@ -105,16 +112,23 @@
             "parameters": [
                 {}
             ],
-            "output_schema": [
-                {
-                    "name": "",
-                    "description": "",
-                    "datatype": "",
-                    "frequency": "",
-                    "type": "",
-                    "lastupdate": ""
+            "output_schema": {
+                "threat_feeds": [
+                    {
+                        "name": "Feed name",
+                        "description": "Feed description",
+                        "datatype": "Data type",
+                        "frequency": "Update frequency",
+                        "type": "Feed type",
+                        "lastupdate": "Last update timestamp"
+                    }
+                ],
+                "_metadata": {
+                    "source": "Data source",
+                    "connector_version": "Connector version",
+                    "total_feeds": "Total number of feeds"
                 }
-            ],
+            },
             "enabled": true
         },
         {
@@ -129,11 +143,15 @@
             "output_schema": {
                 "ports": [
                     {
-                        "port": "",
-                        "count": "",
-                        "percentage": ""
+                        "port": "Port number",
+                        "count": "Attack count",
+                        "percentage": "Percentage of attacks"
                     }
-                ]
+                ],
+                "_metadata": {
+                    "source": "Data source",
+                    "connector_version": "Connector version"
+                }
             },
             "enabled": true
         },
@@ -183,12 +201,16 @@
             "output_schema": {
                 "ips": [
                     {
-                        "ip": "",
-                        "count": "",
-                        "country": "",
-                        "asn": ""
+                        "ip": "IP address",
+                        "count": "Attack count",
+                        "country": "Country code",
+                        "asn": "AS number"
                     }
-                ]
+                ],
+                "_metadata": {
+                    "source": "Data source",
+                    "connector_version": "Connector version"
+                }
             },
             "enabled": true
         }
