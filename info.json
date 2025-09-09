@@ -1,0 +1,102 @@
+{
+    "name": "dshield_dev",
+    "version": "1.1.0",
+    "label": "DShield",
+    "description": "Provide investigative actions like lookup ip and get threat feeds details from DShield",
+    "publisher": "",
+    "icon_small_name": "DSheild_small.png",
+    "icon_large_name": "DSheild_large.png",
+    "category": "Information",
+    "configuration": {
+        "fields": [
+            {
+                "title": "Server URL",
+                "name": "server_url",
+                "type": "text",
+                "visible": true,
+                "editable": true,
+                "required": true,
+                "value": "https://www.dshield.org"
+            }
+        ]
+    },
+    "operations": [
+        {
+            "operation": "lookup_ip",
+            "category": "investigation",
+            "annotation": "lookup_ip",
+            "description": "Get details about an IP Address from DShield",
+            "title": "Lookup IP",
+            "parameters": [
+                {
+                    "title": "IP Address",
+                    "name": "ip",
+                    "value": "",
+                    "type": "text",
+                    "visible": true,
+                    "editable": true,
+                    "required": true
+                }
+            ],
+            "output_schema": {
+                "ip": {
+                    "mindate": "",
+                    "count": "",
+                    "network": "",
+                    "attacks": "",
+                    "asname": "",
+                    "asabusecontact": "",
+                    "comment": "",
+                    "as": "",
+                    "number": "",
+                    "maxrisk": "",
+                    "assize": "",
+                    "maxdate": "",
+                    "ascountry": "",
+                    "updated": "",
+                    "alexa": {
+                        "lastrank": "",
+                        "firstseen": "",
+                        "lastseen": "",
+                        "hostname": "",
+                        "domains": ""
+                    },
+                    "threatfeeds": {
+                        "forumspam": {
+                            "firstseen": "",
+                            "lastseen": ""
+                        },
+                        "qakbot": {
+                            "firstseen": "",
+                            "lastseen": ""
+                        }
+                    }
+                }
+            },
+            "enabled": true
+        },
+        {
+            "operation": "get_threat_feeds",
+            "category": "investigation",
+            "annotation": "get_threat_feeds",
+            "description": "Get open threat feeds from DShield",
+            "title": "Get Threat Feeds",
+            "parameters": [
+                {}
+            ],
+            "output_schema": [
+                {
+                    "name": "",
+                    "description": "",
+                    "datatype": "",
+                    "frequency": "",
+                    "type": "",
+                    "lastupdate": ""
+                }
+            ],
+            "enabled": true
+        }
+    ],
+    "cs_compatible": true,
+    "help_online": "https://help.cybersponse.com/support/solutions/articles/17000072814-dshield-v1-0-0"
+}
