@@ -159,7 +159,7 @@
             "operation": "get_daily_summary",
             "category": "investigation",
             "annotation": "get_daily_summary",
-            "description": "Get daily summary from DShield for the last 7 days",
+            "description": "Get daily summary from DShield for the last 7 days with XML parsing support",
             "title": "Get Daily Summary",
             "parameters": [
                 {}

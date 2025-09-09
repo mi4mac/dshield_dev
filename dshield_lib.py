@@ -99,19 +99,20 @@ class DShield:
                 
                 # Check content type to determine if it's JSON or XML
                 content_type = response.headers.get('content-type', '').lower()
+                response_text = response.text.strip()
                 
+                # Check if response starts with XML declaration or XML tag
+                if response_text.startswith('<?xml') or response_text.startswith('<'):
+                    logger.info('XML response received, returning raw content for XML parsing')
+                    return {'raw_response': response_text, 'content_type': 'xml'}
+                
+                # Try to parse as JSON only if it doesn't look like XML
                 try:
-                    # Try to parse as JSON first
                     return response.json()
                 except json.JSONDecodeError as e:
-                    # If JSON parsing fails, check if it's XML
-                    if 'xml' in content_type or response.text.strip().startswith('<?xml'):
-                        logger.info('XML response received, returning raw content for XML parsing')
-                        return {'raw_response': response.text, 'content_type': 'xml'}
-                    else:
-                        logger.warning('Non-JSON response received: {}'.format(response.text[:200]))
-                        logger.warning('JSON decode error: {}'.format(str(e)))
-                        return {'raw_response': response.text, 'content_type': 'unknown'}
+                    logger.warning('Non-JSON response received: {}'.format(response_text[:200]))
+                    logger.warning('JSON decode error: {}'.format(str(e)))
+                    return {'raw_response': response_text, 'content_type': 'unknown'}
             else:
                 error_msg = self.error_msg.get(response.status_code, 'Unknown error occurred')
                 logger.error('API Error {}: {}'.format(response.status_code, error_msg))
@@ -261,12 +262,32 @@ def get_daily_summary(config, params):
         end_date = datetime.now().strftime('%Y-%m-%d')
         start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
         
-        endpoint = '/dailysummary/{}/{}'.format(start_date, end_date)
-        logger.info('Retrieving daily summary from DShield for period: {} to {}'.format(start_date, end_date))
-        logger.info('Making request to endpoint: {}'.format(endpoint))
+        # Try multiple endpoints for daily summary
+        endpoints_to_try = [
+            '/dailysummary/{}/{}'.format(start_date, end_date),
+            '/daily/?json',
+            '/dailysummary/?json'
+        ]
         
-        result = dshield_obj.make_rest_call(endpoint)
+        result = None
+        for endpoint in endpoints_to_try:
+            try:
+                logger.info('Trying endpoint: {}'.format(endpoint))
+                result = dshield_obj.make_rest_call(endpoint)
+                if result and not (isinstance(result, dict) and 'error' in result):
+                    logger.info('Successfully retrieved data from endpoint: {}'.format(endpoint))
+                    break
+                else:
+                    logger.warning('Endpoint {} returned error or empty result'.format(endpoint))
+            except Exception as e:
+                logger.warning('Endpoint {} failed: {}'.format(endpoint, str(e)))
+                continue
+        
+        if not result:
+            logger.error('All daily summary endpoints failed')
+            raise DShieldError('All daily summary endpoints failed or returned no data')
         logger.info('Received response from DShield API: {}'.format(type(result)))
+        logger.info('Response content: {}'.format(str(result)[:500] if result else 'None'))
         
         # Handle case where endpoint returns empty response
         if isinstance(result, dict) and 'error' in result and 'Empty response' in result['error']:
@@ -278,6 +299,19 @@ def get_daily_summary(config, params):
                     'source': 'DShield',
                     'connector_version': '1.1.0',
                     'note': 'This endpoint appears to be broken or deprecated'
+                }
+            }
+        
+        # Handle case where result is None or empty
+        if not result:
+            logger.warning('Daily summary endpoint returned None or empty result')
+            return {
+                'error': 'Daily summary endpoint returned no data',
+                'raw_response': '',
+                '_metadata': {
+                    'source': 'DShield',
+                    'connector_version': '1.1.0',
+                    'note': 'No data available for the requested date range'
                 }
             }
         
@@ -348,6 +382,28 @@ def get_daily_summary(config, params):
                 'source': 'DShield',
                 'connector_version': '1.1.0',
                 'endpoint': 'dailysummary'
+            }
+        elif isinstance(result, list):
+            # If result is a list, wrap it in a dict with metadata
+            result = {
+                'daily_summaries': result,
+                '_metadata': {
+                    'source': 'DShield',
+                    'connector_version': '1.1.0',
+                    'endpoint': 'dailysummary',
+                    'note': 'Data returned as list format'
+                }
+            }
+        else:
+            # If result is neither dict nor list, wrap it
+            result = {
+                'data': result,
+                '_metadata': {
+                    'source': 'DShield',
+                    'connector_version': '1.1.0',
+                    'endpoint': 'dailysummary',
+                    'note': 'Data returned in unexpected format'
+                }
             }
         
         return result
