@@ -2,7 +2,7 @@ from connectors.core.connector import Connector
 from connectors.core.connector import get_logger, ConnectorError
 from .operations import operations, _check_health
 
-logger = get_logger('dshield')
+logger = get_logger('dshield_dev')
 
 
 class DShield(Connector):

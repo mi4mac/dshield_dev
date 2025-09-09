@@ -1,16 +1,30 @@
+#!/usr/bin/env python3
+"""
+Standalone DShield Operations
+Independent version of operations that doesn't require FortiSOAR connectors module
+"""
+
 import requests
 import json
 import re
-from connectors.core.connector import get_logger, ConnectorError
+import logging
+from datetime import datetime
 
-logger = get_logger('dshield_dev')
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('dshield_dev')
+
+
+class DShieldError(Exception):
+    """Custom exception for DShield operations"""
+    pass
 
 
 class DShield:
     def __init__(self, config):
         server_url = config.get('server_url', '').strip()
         if not server_url:
-            raise ConnectorError('Server URL is required')
+            raise DShieldError('Server URL is required')
         
         # Clean up URL and ensure proper format
         if not server_url.startswith(('http://', 'https://')):
@@ -22,7 +36,7 @@ class DShield:
             server_url = server_url + '/api'
             
         self.base_url = server_url
-        self.headers = {'content-type': 'application/json', 'User-Agent': 'FortiSOAR-dshield_dev-Connector/1.1.0'}
+        self.headers = {'content-type': 'application/json', 'User-Agent': 'dshield_dev-Standalone/1.1.0'}
         self.timeout = config.get('timeout', 30)
         self.error_msg = {
             400: 'Bad/Invalid Request - Check your parameters',
@@ -69,23 +83,23 @@ class DShield:
             else:
                 error_msg = self.error_msg.get(response.status_code, 'Unknown error occurred')
                 logger.error('API Error {}: {}'.format(response.status_code, error_msg))
-                raise ConnectorError('API Error {}: {}'.format(response.status_code, error_msg))
+                raise DShieldError('API Error {}: {}'.format(response.status_code, error_msg))
                 
         except requests.exceptions.Timeout:
             logger.exception('Request timeout')
-            raise ConnectorError(self.error_msg['time_out'])
+            raise DShieldError(self.error_msg['time_out'])
         except requests.exceptions.ConnectionError as e:
             logger.exception('Connection error: {}'.format(e))
-            raise ConnectorError(self.error_msg['connection_error'])
+            raise DShieldError(self.error_msg['connection_error'])
         except requests.exceptions.SSLError as e:
             logger.exception('SSL error: {}'.format(e))
-            raise ConnectorError(self.error_msg['ssl_error'])
+            raise DShieldError(self.error_msg['ssl_error'])
         except requests.exceptions.RequestException as e:
             logger.exception('Request error: {}'.format(e))
-            raise ConnectorError('Request failed: {}'.format(str(e)))
+            raise DShieldError('Request failed: {}'.format(str(e)))
         except Exception as e:
             logger.exception('Unexpected error: {}'.format(e))
-            raise ConnectorError('Unexpected error: {}'.format(str(e)))
+            raise DShieldError('Unexpected error: {}'.format(str(e)))
 
 
 def _validate_ip_address(ip):
@@ -103,12 +117,12 @@ def _check_health(config):
         response = dshield_obj.make_rest_call(endpoint)
         logger.info('Health check successful')
         return True
-    except ConnectorError as e:
+    except DShieldError as e:
         logger.error('Health check failed: {}'.format(str(e)))
-        raise ConnectorError('Health check failed: {}'.format(str(e)))
+        raise DShieldError('Health check failed: {}'.format(str(e)))
     except Exception as e:
         logger.error('Health check failed with unexpected error: {}'.format(str(e)))
-        raise ConnectorError('Health check failed: Unable to connect to DShield API')
+        raise DShieldError('Health check failed: Unable to connect to DShield API')
 
 
 def lookup_ip(config, params):
@@ -116,10 +130,10 @@ def lookup_ip(config, params):
     ip = params.get('ip', '').strip()
     
     if not ip:
-        raise ConnectorError('IP address parameter is required')
+        raise DShieldError('IP address parameter is required')
     
     if not _validate_ip_address(ip):
-        raise ConnectorError('Invalid IP address format: {}'.format(ip))
+        raise DShieldError('Invalid IP address format: {}'.format(ip))
     
     try:
         dshield_obj = DShield(config)
@@ -138,11 +152,11 @@ def lookup_ip(config, params):
         
         return result
         
-    except ConnectorError:
+    except DShieldError:
         raise
     except Exception as e:
         logger.error('Error in lookup_ip: {}'.format(str(e)))
-        raise ConnectorError('Failed to lookup IP: {}'.format(str(e)))
+        raise DShieldError('Failed to lookup IP: {}'.format(str(e)))
 
 
 def get_threat_feeds(config, params):
@@ -172,11 +186,12 @@ def get_threat_feeds(config, params):
         
         return result
         
-    except ConnectorError:
+    except DShieldError:
         raise
     except Exception as e:
         logger.error('Error in get_threat_feeds: {}'.format(str(e)))
-        raise ConnectorError('Failed to retrieve threat feeds: {}'.format(str(e)))
+        raise DShieldError('Failed to retrieve threat feeds: {}'.format(str(e)))
+
 
 def get_top_ports(config, params):
     """Get top ports information from DShield"""
@@ -196,11 +211,11 @@ def get_top_ports(config, params):
         
         return result
         
-    except ConnectorError:
+    except DShieldError:
         raise
     except Exception as e:
         logger.error('Error in get_top_ports: {}'.format(str(e)))
-        raise ConnectorError('Failed to retrieve top ports: {}'.format(str(e)))
+        raise DShieldError('Failed to retrieve top ports: {}'.format(str(e)))
 
 
 def get_daily_summary(config, params):
@@ -237,11 +252,11 @@ def get_daily_summary(config, params):
         
         return result
         
-    except ConnectorError:
+    except DShieldError:
         raise
     except Exception as e:
         logger.error('Error in get_daily_summary: {}'.format(str(e)))
-        raise ConnectorError('Failed to retrieve daily summary: {}'.format(str(e)))
+        raise DShieldError('Failed to retrieve daily summary: {}'.format(str(e)))
 
 
 def get_top_attacking_ips(config, params):
@@ -262,11 +277,11 @@ def get_top_attacking_ips(config, params):
         
         return result
         
-    except ConnectorError:
+    except DShieldError:
         raise
     except Exception as e:
         logger.error('Error in get_top_attacking_ips: {}'.format(str(e)))
-        raise ConnectorError('Failed to retrieve top attacking IPs: {}'.format(str(e)))
+        raise DShieldError('Failed to retrieve top attacking IPs: {}'.format(str(e)))
 
 
 operations = {

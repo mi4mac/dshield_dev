@@ -2,10 +2,10 @@
     "name": "dshield_dev",
     "version": "1.1.0",
     "label": "DShield",
-    "description": "Provide investigative actions like lookup ip and get threat feeds details from DShield",
-    "publisher": "",
-    "icon_small_name": "DSheild_small.png",
-    "icon_large_name": "DSheild_large.png",
+    "description": "Provide investigative actions like lookup ip, get threat feeds, top ports, daily summary, and top attacking IPs from DShield",
+    "publisher": "FortiSOAR Community",
+    "icon_small_name": "DShield_small.png",
+    "icon_large_name": "DShield_large.png",
     "category": "Information",
     "configuration": {
         "fields": [
@@ -16,7 +16,18 @@
                 "visible": true,
                 "editable": true,
                 "required": true,
-                "value": "https://www.dshield.org"
+                "value": "https://www.dshield.org",
+                "description": "DShield server URL (e.g., https://www.dshield.org)"
+            },
+            {
+                "title": "Request Timeout",
+                "name": "timeout",
+                "type": "number",
+                "visible": true,
+                "editable": true,
+                "required": false,
+                "value": 30,
+                "description": "Request timeout in seconds (default: 30)"
             }
         ]
     },
@@ -95,8 +106,69 @@
                 }
             ],
             "enabled": true
+        },
+        {
+            "operation": "get_top_ports",
+            "category": "investigation",
+            "annotation": "get_top_ports",
+            "description": "Get top ports information from DShield",
+            "title": "Get Top Ports",
+            "parameters": [
+                {}
+            ],
+            "output_schema": {
+                "ports": [
+                    {
+                        "port": "",
+                        "count": "",
+                        "percentage": ""
+                    }
+                ]
+            },
+            "enabled": true
+        },
+        {
+            "operation": "get_daily_summary",
+            "category": "investigation",
+            "annotation": "get_daily_summary",
+            "description": "Get daily summary from DShield (Note: This endpoint may return HTML instead of JSON)",
+            "title": "Get Daily Summary",
+            "parameters": [
+                {}
+            ],
+            "output_schema": {
+                "error": "Daily summary endpoint currently returns HTML instead of JSON",
+                "raw_response": "",
+                "_metadata": {
+                    "source": "DShield",
+                    "connector_version": "1.1.0",
+                    "note": "This endpoint may be deprecated or have changed format"
+                }
+            },
+            "enabled": true
+        },
+        {
+            "operation": "get_top_attacking_ips",
+            "category": "investigation",
+            "annotation": "get_top_attacking_ips",
+            "description": "Get top attacking IPs from DShield",
+            "title": "Get Top Attacking IPs",
+            "parameters": [
+                {}
+            ],
+            "output_schema": {
+                "ips": [
+                    {
+                        "ip": "",
+                        "count": "",
+                        "country": "",
+                        "asn": ""
+                    }
+                ]
+            },
+            "enabled": true
         }
     ],
     "cs_compatible": true,
-    "help_online": "https://help.cybersponse.com/support/solutions/articles/17000072814-dshield-v1-0-0"
+    "help_online": "https://www.dshield.org/help.html"
 }
