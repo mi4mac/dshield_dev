@@ -5,7 +5,7 @@ from .operations import operations, _check_health
 logger = get_logger('dshield_dev')
 
 
-class DShield(Connector):
+class DShieldConnector(Connector):
     def execute(self, config, operation, operation_params, **kwargs):
         try:
             operation = operations.get(operation)

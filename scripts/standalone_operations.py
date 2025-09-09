@@ -75,10 +75,16 @@ class DShield:
             logger.info('Response status: {}'.format(response.status_code))
             
             if response.ok:
+                # Check if response has content
+                if not response.text.strip():
+                    logger.warning('Empty response received from server')
+                    return {'error': 'Empty response received from server', 'raw_response': ''}
+                
                 try:
                     return response.json()
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
                     logger.warning('Non-JSON response received: {}'.format(response.text[:200]))
+                    logger.warning('JSON decode error: {}'.format(str(e)))
                     return {'raw_response': response.text}
             else:
                 error_msg = self.error_msg.get(response.status_code, 'Unknown error occurred')
@@ -222,24 +228,44 @@ def get_daily_summary(config, params):
     """Get daily summary from DShield"""
     try:
         dshield_obj = DShield(config)
-        # Note: The /daily/?json endpoint currently returns HTML instead of JSON
-        # This is a known issue with the DShield API
-        endpoint = '/daily/?json'
-        logger.info('Retrieving daily summary from DShield')
-        logger.warning('Note: Daily summary endpoint may return HTML instead of JSON')
+        # Use the working dailysummary endpoint instead of the broken /daily/?json endpoint
+        # Get data for the last 7 days
+        from datetime import datetime, timedelta
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        
+        endpoint = '/dailysummary/{}/{}'.format(start_date, end_date)
+        logger.info('Retrieving daily summary from DShield for period: {} to {}'.format(start_date, end_date))
         
         result = dshield_obj.make_rest_call(endpoint)
         
-        # Handle case where endpoint returns HTML instead of JSON
-        if isinstance(result, dict) and 'raw_response' in result:
-            logger.warning('Daily summary endpoint returned HTML instead of JSON')
+        # Handle case where endpoint returns empty response
+        if isinstance(result, dict) and 'error' in result and 'Empty response' in result['error']:
+            logger.warning('Daily summary endpoint returned empty response')
             return {
-                'error': 'Daily summary endpoint currently returns HTML instead of JSON',
-                'raw_response': result['raw_response'][:500] + '...' if len(result['raw_response']) > 500 else result['raw_response'],
+                'error': 'Daily summary endpoint returned empty response - endpoint may be broken',
+                'raw_response': '',
                 '_metadata': {
                     'source': 'DShield',
                     'connector_version': '1.1.0',
-                    'note': 'This endpoint may be deprecated or have changed format'
+                    'note': 'This endpoint appears to be broken or deprecated'
+                }
+            }
+        
+        # Handle case where endpoint returns XML instead of JSON
+        if isinstance(result, dict) and 'raw_response' in result:
+            logger.info('Daily summary endpoint returned XML data')
+            # Parse the XML response to extract useful information
+            xml_content = result['raw_response']
+            return {
+                'daily_summary': xml_content,
+                'summary_type': 'XML',
+                'date_range': '{} to {}'.format(start_date, end_date),
+                '_metadata': {
+                    'source': 'DShield',
+                    'connector_version': '1.1.0',
+                    'endpoint': 'dailysummary',
+                    'note': 'Returns XML format daily summary data'
                 }
             }
         
@@ -247,7 +273,8 @@ def get_daily_summary(config, params):
         if isinstance(result, dict):
             result['_metadata'] = {
                 'source': 'DShield',
-                'connector_version': '1.1.0'
+                'connector_version': '1.1.0',
+                'endpoint': 'dailysummary'
             }
         
         return result
