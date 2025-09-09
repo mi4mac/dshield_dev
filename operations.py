@@ -22,7 +22,18 @@ class DShield:
             server_url = server_url + '/api'
             
         self.base_url = server_url
-        self.headers = {'content-type': 'application/json', 'User-Agent': 'FortiSOAR-dshield_dev-Connector/1.1.0'}
+        
+        # Get API key from config
+        api_key = config.get('api_key', '').strip()
+        if not api_key:
+            raise ConnectorError('API key is required for DShield authentication')
+        
+        # Set up headers with API key authentication
+        self.headers = {
+            'content-type': 'application/json', 
+            'User-Agent': 'FortiSOAR-dshield_dev-Connector/1.1.0',
+            'Authorization': 'API_KEY {}'.format(api_key)
+        }
         self.timeout = config.get('timeout', 30)
         self.error_msg = {
             400: 'Bad/Invalid Request - Check your parameters',

@@ -20,6 +20,16 @@
                 "description": "DShield server URL (e.g., https://www.dshield.org)"
             },
             {
+                "title": "API Key",
+                "name": "api_key",
+                "type": "password",
+                "visible": true,
+                "editable": true,
+                "required": true,
+                "value": "",
+                "description": "DShield API key for authentication (required for most endpoints)"
+            },
+            {
                 "title": "Request Timeout",
                 "name": "timeout",
                 "type": "number",

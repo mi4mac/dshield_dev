@@ -23,13 +23,15 @@ A FortiSOAR connector for DShield threat intelligence platform that provides inv
 ### Configuration
 
 - **Server URL**: DShield server URL (default: https://www.dshield.org)
+- **API Key**: DShield API key for authentication (required)
 - **Request Timeout**: Request timeout in seconds (default: 30)
 
 ## Installation
 
 1. Copy the connector files to your FortiSOAR connectors directory
-2. Restart FortiSOAR services
-3. Configure the connector with your DShield server URL
+2. Install dependencies: `pip install -r requirements.txt`
+3. Restart FortiSOAR services
+4. Configure the connector with your DShield server URL and API key
 
 ## Python Scripts
 
@@ -43,7 +45,7 @@ See the [scripts/README.md](scripts/README.md) for detailed usage instructions.
 
 ## Version History
 
-- **v1.1.0**: Enhanced error handling, input validation, additional operations, Python scripts
+- **v1.1.0**: Added API key authentication support, improved FortiSOAR compliance, added missing package files, enhanced error handling, input validation, additional operations, Python scripts
 - **v1.0.0**: Initial release with basic IP lookup and threat feeds
 
 ## Support
