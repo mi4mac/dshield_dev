@@ -23,17 +23,18 @@ class DShield:
             
         self.base_url = server_url
         
-        # Get API key from config
+        # Get API key from config (optional for public endpoints)
         api_key = config.get('api_key', '').strip()
-        if not api_key:
-            raise ConnectorError('API key is required for DShield authentication')
         
-        # Set up headers with API key authentication
+        # Set up headers
         self.headers = {
             'content-type': 'application/json', 
-            'User-Agent': 'FortiSOAR-dshield_dev-Connector/1.1.0',
-            'Authorization': 'API_KEY {}'.format(api_key)
+            'User-Agent': 'FortiSOAR-dshield_dev-Connector/1.1.0'
         }
+        
+        # Add API key to headers if provided
+        if api_key:
+            self.headers['Authorization'] = 'API_KEY {}'.format(api_key)
         self.timeout = config.get('timeout', 30)
         self.error_msg = {
             400: 'Bad/Invalid Request - Check your parameters',
@@ -77,12 +78,21 @@ class DShield:
                     logger.warning('Empty response received from server')
                     return {'error': 'Empty response received from server', 'raw_response': ''}
                 
+                # Check content type to determine if it's JSON or XML
+                content_type = response.headers.get('content-type', '').lower()
+                
                 try:
+                    # Try to parse as JSON first
                     return response.json()
                 except json.JSONDecodeError as e:
-                    logger.warning('Non-JSON response received: {}'.format(response.text[:200]))
-                    logger.warning('JSON decode error: {}'.format(str(e)))
-                    return {'raw_response': response.text}
+                    # If JSON parsing fails, check if it's XML
+                    if 'xml' in content_type or response.text.strip().startswith('<?xml'):
+                        logger.info('XML response received, returning raw content for XML parsing')
+                        return {'raw_response': response.text, 'content_type': 'xml'}
+                    else:
+                        logger.warning('Non-JSON response received: {}'.format(response.text[:200]))
+                        logger.warning('JSON decode error: {}'.format(str(e)))
+                        return {'raw_response': response.text, 'content_type': 'unknown'}
             else:
                 error_msg = self.error_msg.get(response.status_code, 'Unknown error occurred')
                 logger.error('API Error {}: {}'.format(response.status_code, error_msg))
@@ -223,17 +233,23 @@ def get_top_ports(config, params):
 def get_daily_summary(config, params):
     """Get daily summary from DShield"""
     try:
+        logger.info('Starting get_daily_summary operation with config: {}'.format({k: v for k, v in config.items() if k != 'api_key'}))
+        
         dshield_obj = DShield(config)
         # Use the working dailysummary endpoint instead of the broken /daily/?json endpoint
         # Get data for the last 7 days
         from datetime import datetime, timedelta
+        import xml.etree.ElementTree as ET
+        
         end_date = datetime.now().strftime('%Y-%m-%d')
         start_date = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
         
         endpoint = '/dailysummary/{}/{}'.format(start_date, end_date)
         logger.info('Retrieving daily summary from DShield for period: {} to {}'.format(start_date, end_date))
+        logger.info('Making request to endpoint: {}'.format(endpoint))
         
         result = dshield_obj.make_rest_call(endpoint)
+        logger.info('Received response from DShield API: {}'.format(type(result)))
         
         # Handle case where endpoint returns empty response
         if isinstance(result, dict) and 'error' in result and 'Empty response' in result['error']:
@@ -251,21 +267,65 @@ def get_daily_summary(config, params):
         # Handle case where endpoint returns XML instead of JSON
         if isinstance(result, dict) and 'raw_response' in result:
             logger.info('Daily summary endpoint returned XML data')
-            # Parse the XML response to extract useful information
             xml_content = result['raw_response']
-            return {
-                'daily_summary': xml_content,
-                'summary_type': 'XML',
-                'date_range': '{} to {}'.format(start_date, end_date),
-                '_metadata': {
-                    'source': 'DShield',
-                    'connector_version': '1.1.0',
-                    'endpoint': 'dailysummary',
-                    'note': 'Returns XML format daily summary data'
+            
+            try:
+                # Parse XML content
+                root = ET.fromstring(xml_content)
+                daily_summaries = []
+                
+                for daily in root.findall('daily'):
+                    date = daily.find('date').text if daily.find('date') is not None else 'Unknown'
+                    records = daily.find('records').text if daily.find('records') is not None else '0'
+                    sources = daily.find('sources').text if daily.find('sources') is not None else '0'
+                    targets = daily.find('targets').text if daily.find('targets') is not None else '0'
+                    
+                    daily_summaries.append({
+                        'date': date,
+                        'records': int(records) if records.isdigit() else 0,
+                        'sources': int(sources) if sources.isdigit() else 0,
+                        'targets': int(targets) if targets.isdigit() else 0
+                    })
+                
+                # Calculate totals
+                total_records = sum(d['records'] for d in daily_summaries)
+                total_sources = sum(d['sources'] for d in daily_summaries)
+                total_targets = sum(d['targets'] for d in daily_summaries)
+                
+                return {
+                    'daily_summaries': daily_summaries,
+                    'summary_totals': {
+                        'total_records': total_records,
+                        'total_sources': total_sources,
+                        'total_targets': total_targets,
+                        'date_range': '{} to {}'.format(start_date, end_date)
+                    },
+                    'summary_type': 'Parsed XML',
+                    '_metadata': {
+                        'source': 'DShield',
+                        'connector_version': '1.1.0',
+                        'endpoint': 'dailysummary',
+                        'note': 'Parsed XML format daily summary data',
+                        'raw_xml_available': True
+                    }
                 }
-            }
+                
+            except ET.ParseError as e:
+                logger.warning('Failed to parse XML response: {}'.format(str(e)))
+                return {
+                    'daily_summary': xml_content,
+                    'summary_type': 'Raw XML (Parse Failed)',
+                    'date_range': '{} to {}'.format(start_date, end_date),
+                    'parse_error': str(e),
+                    '_metadata': {
+                        'source': 'DShield',
+                        'connector_version': '1.1.0',
+                        'endpoint': 'dailysummary',
+                        'note': 'XML parsing failed, returning raw content'
+                    }
+                }
         
-        # Add metadata to the response
+        # Add metadata to the response if it's a regular dict
         if isinstance(result, dict):
             result['_metadata'] = {
                 'source': 'DShield',
@@ -275,10 +335,14 @@ def get_daily_summary(config, params):
         
         return result
         
-    except ConnectorError:
+    except ConnectorError as e:
+        logger.error('ConnectorError in get_daily_summary: {}'.format(str(e)))
         raise
     except Exception as e:
-        logger.error('Error in get_daily_summary: {}'.format(str(e)))
+        logger.error('Unexpected error in get_daily_summary: {}'.format(str(e)))
+        logger.error('Error type: {}'.format(type(e).__name__))
+        import traceback
+        logger.error('Traceback: {}'.format(traceback.format_exc()))
         raise ConnectorError('Failed to retrieve daily summary: {}'.format(str(e)))
 
 

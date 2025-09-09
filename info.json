@@ -25,9 +25,9 @@
                 "type": "password",
                 "visible": true,
                 "editable": true,
-                "required": true,
+                "required": false,
                 "value": "",
-                "description": "DShield API key for authentication (required for most endpoints)"
+                "description": "DShield API key for authentication (optional for public endpoints)"
             },
             {
                 "title": "Request Timeout",
@@ -147,14 +147,26 @@
                 {}
             ],
             "output_schema": {
-                "daily_summary": "XML content with daily attack statistics",
-                "summary_type": "XML",
-                "date_range": "Date range for the summary data",
+                "daily_summaries": [
+                    {
+                        "date": "Date of the summary",
+                        "records": "Number of attack records",
+                        "sources": "Number of source IPs",
+                        "targets": "Number of target IPs"
+                    }
+                ],
+                "summary_totals": {
+                    "total_records": "Total attack records for the period",
+                    "total_sources": "Total source IPs for the period",
+                    "total_targets": "Total target IPs for the period",
+                    "date_range": "Date range for the summary data"
+                },
+                "summary_type": "Parsed XML",
                 "_metadata": {
                     "source": "DShield",
                     "connector_version": "1.1.0",
                     "endpoint": "dailysummary",
-                    "note": "Returns XML format daily summary data"
+                    "note": "Parsed XML format daily summary data"
                 }
             },
             "enabled": true
